@@ -1,0 +1,344 @@
+<!doctype html>
+<html lang="en">
+<head>
+	<meta charset="UTF-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, minimum-scale=1, user-scalable=no">
+
+	<meta name="apple-mobile-web-app-capable" content="yes">
+	<meta name="mobile-web-app-capable" content="yes">
+
+	<title>Canvas Game </title>
+
+	<script src="sprite.js"></script>
+
+    
+	<style>
+	canvas {
+		display: block;
+		position: absolute;
+		margin: auto;
+		top: 0;
+		bottom: 0;
+		left: 0;
+		right: 0;
+	}
+	</style>
+	
+</head>
+<body>
+
+    <script>
+        document.body.addEventListener("keydown", function(e) {
+        keys[e.keyCode] = true;
+        });
+        
+        document.body.addEventListener("keyup", function(e) {
+        keys[e.keyCode] = false;
+        });  
+    
+        var
+        keys = [],
+        canvas,
+        ctx,
+        x=0,
+        y=0,
+        width,
+        height,
+        frames=0,
+        fg_posX=0,
+        fg_posY=0,
+        bg_posX=0,
+        action,
+
+        lastkeyPress=0,
+        timeDif=1000,
+
+        txtStr,
+        
+        NB,
+        EB,
+        SB,
+        WB,
+        
+        
+        currentstate,
+        
+        states = {
+            Title:0, Splash:1, Intro:2, Tutorial:3, World1:4, World2:5, Space:6, Pause:7, GameOver:8
+        },
+
+        bird = {
+
+            height:24,
+            width:34,
+
+            posX:100,
+            x: 100,
+            y: 480 ,
+            
+            speed: 2,
+            velX: 0,
+            velY: 0,
+            
+            gravity:0.25,
+            friction: 0.85,
+            _jump:6,
+            
+            frame: 0,
+            idle: [0,1,2,1],
+            jumping1: false,
+            jumping2: false,
+
+
+            moveRight:function(){
+                this.velX++;
+                /*console.log("RIGHT");*/
+                //console.log(" POSBIRD X:" + this.x);
+            },
+            
+            moveLeft:function(){
+                this.velX--;
+                //console.log("BIRD POS X:" + this.x);
+                /*console.log("LEFT");*/
+            },
+
+            //doesn't work :l
+            doubleJump:function(){
+                if(this.jumping1 == true && this.jumping2 != true){
+                    this.velY = -this._jump;
+                    //console.log("2nd jump");
+                }
+            },
+
+            jump:function(){
+                if(!this.jumping1){
+                    this.velY = -this._jump;
+                    //console.log("jump");
+                    action="jump";
+                }
+
+            }, //BIRD END
+
+
+            ************************************************************************************************************
+            *///////////////////////////////////////////////////////////////////////////////////////////////////////////
+            *// UPDATE BIRD
+            *///////////////////////////////////////////////////////////////////////////////////////////////////////////
+            ************************************************************************************************************
+            update: function(){
+
+                //SPLASH STATES
+                /*if current state is splash n=10 */
+                var n = currentstate == states.Splash ? 10 : 5;
+
+
+                //FRAMES
+                /* if frame mod n is = zero increment else keep at current frame  */
+                this.frame += frames %n === 0? 1:0;
+                this.frame %= this.idle.length;
+                
+                ////////////////////////////////////////////////////////////////////////////////////////////////////////
+                // GAME INPUT
+                ////////////////////////////////////////////////////////////////////////////////////////////////////////
+                if (keys[38] || keys[32]) {
+                    // up arrow or space
+                    if(!this.jumping1)
+                    {
+                        this.jump();
+                        this.jumping1=true;
+                    }
+
+                }
+
+                if (keys[39]) {
+                    // right arrow
+                    if (this.velX < this.speed) {             
+                         this.moveRight();
+                         action="right";
+                     }     
+                }     
+
+                if (keys[37]) {
+                    // left arrow         
+                    if (this.velX > -this.speed) {
+                        this.moveLeft();
+                        action="left";
+                    }
+                }
+                
+              
+                this.velX *= this.friction;
+             
+                this.velY += this.gravity;
+
+               /*  HERO MOVEMENT ON SCREEN*/
+                this.x += this.velX;
+                this.y += this.velY;
+
+                
+                /*added stuff end*/
+                //if at bottom go no further 
+                if(this.y >= SB){
+                    this.y=SB;
+                    this.jumping1 = false;
+                }
+                
+            },
+            
+            draw: function(ctx){
+                ctx.save();
+                var n = this.idle[this.frame];
+                s_bird[n].draw(ctx, this.posX, this.y);
+                /*console.log("Bird X: "+this.x);*/
+                ctx.restore();
+            }//DRAW BIRD
+            
+            
+        };/*bird end*/
+
+
+        function main(){
+        //MAKE CANVAS
+            canvas = document.createElement("canvas");
+            width= window.innerWidth;
+            height = window.innerHeight;
+            
+            if(width >= 500){
+                //width = 320;
+                //height = 480;
+
+                width=500;
+                height=500;
+                canvas.style.border = "1px solid #000";
+                
+            }
+
+            canvas.width = width;
+            canvas.height = height;
+            ctx = canvas.getContext("2d");
+            currentstate = states.Splash;
+            document.body.appendChild(canvas);
+            
+            var img = new Image();
+            img.onload = function(){
+                console.log("image loaded");
+                initSprites(this);
+                run();
+                
+            }
+            img.src ="sheet.png";
+
+            
+        
+        }/*end main*/
+
+
+        function run(){
+            var loop = function(){
+                 update();
+                 render();
+                 window.requestAnimationFrame(loop, canvas);
+            }   
+            window.requestAnimationFrame(loop, canvas);     
+        }/*end run*/
+        
+        
+        
+        function update(){
+            frames++;
+
+            /*set bounds*/
+            /*EAST BOUND*/
+            EB = 0;
+            /*WEST BOUND*/
+            WB = 0;
+            /*SOUTH BOUND*/
+    	    SB= height - (s_fg.height + bird.height);
+    	    /*NORTH BOUND*/
+    	    NB= 0 -height;
+
+
+            //pipes.update();
+
+            bird.update();
+
+            /*MOVE FOREGROUND*/
+            fg_posX = (fg_posX - bird.velX)% 14;
+
+            //x location of stuff
+            x = (x - bird.velX);
+            //console.log("X: "+x );
+
+
+
+
+            /*move background slowly*/
+            /*one tenth hero velocity*/
+            bg_posX = (bg_posX - bird.velX/10);
+            
+        }
+        /*end update*/
+        
+        
+
+        function render(){
+            /*background x:fg_posX, y:fg_posY*/
+            ctx.fillStyle=s_bg.color; 
+            ctx.fillRect(0,0,width,height);
+
+
+            /*s_bg.draw(ctx, 0, height-s_bg.height);*/
+            s_bg.draw(ctx, bg_posX, height-s_bg.height);
+            s_bg.draw(ctx, bg_posX+s_bg.width, height-s_bg.height);
+            s_bg.draw(ctx, bg_posX-s_bg.width, height-s_bg.height);
+            
+
+            //pipes.draw(ctx);
+
+            /*draw done in bird 'struct'*/
+            bird.draw(ctx);
+
+            ///////////////////////////////////////////////////////////////////////////////////////////////////////////
+            //OBSTACLES?
+            ///////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+            ///////////////////////////////////////////////////////////////////////////////////////////////////////////
+            //FOREGROUND
+            ///////////////////////////////////////////////////////////////////////////////////////////////////////////
+            /*foreground x:fg_posX, y:fg_posY */
+            s_fg.draw(ctx, fg_posX, height-s_fg.height);
+            s_fg.draw(ctx, fg_posX+s_fg.width, height-s_fg.height);
+            s_fg.draw(ctx, fg_posX-s_fg.width, height-s_fg.height);
+
+        ///////////////////////////////////////////////////////////////////////////////////////////////////////////
+        //DEBUGGING TEXT OUTPUT
+        ///////////////////////////////////////////////////////////////////////////////////////////////////////////
+        ctx.font = "10px Arial";
+        ctx.fillStyle = "red";
+
+        var simpBirdY = Math.round(bird.y * 100) / 100;
+        var simpBirdX = Math.round(bird.x * 100) / 100;
+
+        var out1 = "Bird X: " + simpBirdX;
+        var out2 = "Bird Y: " + simpBirdY;
+        var out3 = "Action: " + action;
+
+        ctx.fillText(out1,10,20);
+        ctx.fillText(out2,100,20);
+        ctx.fillText(out3,10,30);
+
+           
+            
+        }
+        /*end render*/
+        
+        
+        
+        main();
+        
+        
+    </script>
+    
+    
+    </body>
+</html>
